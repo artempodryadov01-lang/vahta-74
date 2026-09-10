@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: worktime-telegram-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python worktime_bot.py
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: TIMEZONE
+        value: Asia/Almaty
+      - key: HOLIDAY_COUNTRY
+        value: RU
+      - key: DATABASE_URL
+        sync: false
+      - key: RENDER_EXTERNAL_URL
+        sync: false
+      - key: PORT
+        value: "8080"
