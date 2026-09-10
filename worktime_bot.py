@@ -175,7 +175,7 @@ class Payroll(Base):
     __table_args__ = (UniqueConstraint("user_id", "year", "month", name="uq_payroll_user_month"),)
 
 # Async engine
-engine = create_async_engine(DB_URL, echo=False)
+   engine = create_async_engine(DB_URL, echo=False, connect_args={"statement_cache_size": 0})
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 async def init_db():
