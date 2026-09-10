@@ -252,6 +252,27 @@ def format_money(amount):
         return "0.00"
     return f"{amount:,.2f}".replace(",", " ")
 
+def get_database_url():
+    url = DATABASE_URL
+    
+    if not url:
+        # Если DATABASE_URL не задан, используем SQLite
+        if os.getenv("RENDER"):
+            logger.warning("No DATABASE_URL on Render. Using /tmp (NOT persistent!)")
+            # 4 слэша для абсолютного пути в Linux (/tmp/...)
+            url = "sqlite+aiosqlite:////tmp/worktime_bot.db"
+        else:
+            os.makedirs("data", exist_ok=True)
+            url = "sqlite+aiosqlite:///data/worktime_bot.db"
+    else:
+        # Агрессивно форсируем asyncpg для ЛЮБОЙ postgres-ссылки
+        if "postgres" in url:
+            url = url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+            
+    return url
+
 # Bot and Dispatcher
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
