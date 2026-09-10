@@ -847,6 +847,14 @@ async def create_web_app():
 
 async def on_startup():
     await init_db()
+
+     try:
+        me = await bot.get_me()
+        logger.info(f"Bot authorized as @{me.username}")
+    except Exception as e:
+        logger.error(f"Bot authorization failed: {e}")
+        raise
+        
     scheduler = AsyncIOScheduler(timezone=tz)
     scheduler.add_job(recalculate_all_payrolls, CronTrigger(hour=0, minute=0), id="recalculate_payrolls", replace_existing=True)
     scheduler.start()
