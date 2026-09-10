@@ -65,7 +65,9 @@ except Exception:
 # ЖЕЛЕЗОБЕТОННАЯ ЛОГИКА ПОДКЛЮЧЕНИЯ К БД
 # ==========================================
 def get_database_url():
-    if not DATABASE_URL:
+    url = os.getenv("DATABASE_URL", "").strip()
+    
+    if not url:
         if os.getenv("RENDER"):
             logger.warning("DATABASE_URL not found. Using /tmp SQLite (data resets on restart).")
             return "sqlite+aiosqlite:////tmp/worktime_bot.db"
@@ -73,12 +75,26 @@ def get_database_url():
             os.makedirs("data", exist_ok=True)
             return "sqlite+aiosqlite:///data/worktime_bot.db"
     
-    # Принудительная замена на asyncpg для Render/PostgreSQL
-    url = DATABASE_URL
+    # 1. Принудительно ставим асинхронный драйвер asyncpg
     url = url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
     url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     url = url.replace("postgres://", "postgresql+asyncpg://", 1)
     
+    # 2. Исправление ошибки SSL (asyncpg понимает ssl, а не sslmode)
+    url = url.replace("sslmode=require", "ssl=require")
+    url = url.replace("?sslmode=", "?ssl=")
+    
+    # 3. ИСПРАВЛЕНИЕ ОШИБКИ NEON (channel_binding)
+    # asyncpg не понимает этот параметр, поэтому мы его безжалостно удаляем
+    url = url.replace("&channel_binding=disable", "")
+    url = url.replace("?channel_binding=disable", "?")
+    url = url.replace("&channel_binding=require", "")
+    url = url.replace("?channel_binding=require", "?")
+    
+    # Убираем висячий вопросительный знак, если он остался в конце строки
+    if url.endswith("?"):
+        url = url[:-1]
+        
     # Безопасный лог (скрываем пароль)
     safe_url = url.split("@")[0] + "@***" if "@" in url else url
     logger.info(f"Database URL configured: {safe_url}")
