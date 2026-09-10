@@ -8,4 +8,3 @@ pytz==2024.2
 holidays==0.57
 aiohttp==3.10.5
 python-dotenv==1.0.1
-pydantic==2.9.2
