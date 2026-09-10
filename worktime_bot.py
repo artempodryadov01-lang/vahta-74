@@ -847,36 +847,37 @@ async def create_web_app():
 
 async def on_startup():
     await init_db()
-
-     try:
+    logger.info("Database initialized successfully.")
+    
+    # Проверка токена
+    try:
         me = await bot.get_me()
         logger.info(f"Bot authorized as @{me.username}")
     except Exception as e:
         logger.error(f"Bot authorization failed: {e}")
         raise
-        
+    
+    # Scheduler
     scheduler = AsyncIOScheduler(timezone=tz)
     scheduler.add_job(recalculate_all_payrolls, CronTrigger(hour=0, minute=0), id="recalculate_payrolls", replace_existing=True)
     scheduler.start()
     logger.info("Scheduler started")
 
+    # Webhook setup
     if RENDER_EXTERNAL_URL:
         webhook_url = f"{RENDER_EXTERNAL_URL}/webhook/{BOT_TOKEN}"
-        await bot.set_webhook(webhook_url)
+        await bot.set_webhook(
+            webhook_url, 
+            allowed_updates=["message", "callback_query", "inline_query", "chosen_inline_result", "chat_member", "my_chat_member"]
+        )
         logger.info(f"Webhook set to {webhook_url}")
     else:
-        try:
-            await bot.delete_webhook(drop_pending_updates=True)
-            logger.info("Webhook deleted, using polling")
-        except Exception as e:
-            logger.warning(f"Could not delete webhook: {e}")
-
-async def on_shutdown():
-    await bot.session.close()
-    logger.info("Bot session closed")
+        await bot.delete_webhook(drop_pending_updates=True)
+        logger.info("Webhook deleted, using polling")
 
 async def main():
     await on_startup()
+    
     web_app = await create_web_app()
     runner = web.AppRunner(web_app)
     await runner.setup()
@@ -886,7 +887,7 @@ async def main():
 
     if not RENDER_EXTERNAL_URL:
         try:
-            await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+            await dp.start_polling(bot)
         except (KeyboardInterrupt, SystemExit):
             await on_shutdown()
     else:
@@ -898,7 +899,5 @@ async def main():
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Bot stopped")
     except (KeyboardInterrupt, SystemExit):
         logger.info("Bot stopped")
