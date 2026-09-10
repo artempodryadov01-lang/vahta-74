@@ -819,18 +819,30 @@ async def health_handler(request):
     return web.json_response({"status": "ok"})
 
 async def create_web_app():
+    from aiogram.types import Update
+    
     app = web.Application()
     app.router.add_get("/health", health_handler)
+    
     if RENDER_EXTERNAL_URL:
         webhook_path = f"/webhook/{BOT_TOKEN}"
-        async def webhook_handler(request):
-            if request.headers.get("content-type") == "application/json":
+        
+        async def webhook_handler(request: web.Request) -> web.Response:
+            try:
+                # Получаем JSON от Telegram
                 data = await request.json()
-                update_obj = await bot.session._prepare_value(__import__("aiogram").types.Update, data)
-                await dp.feed_update(bot, update_obj)
+                # Корректно парсим через Pydantic V2 (стандарт aiogram 3.x)
+                update = Update.model_validate(data)
+                # Передаем в диспетчер
+                await dp.feed_update(bot, update)
                 return web.json_response({"ok": True})
-            return web.json_response({"ok": False}, status=400)
+            except Exception as e:
+                logger.error(f"Webhook processing error: {e}", exc_info=True)
+                return web.json_response({"ok": False}, status=500)
+        
         app.router.add_post(webhook_path, webhook_handler)
+        logger.info(f"Webhook handler registered at {webhook_path}")
+        
     return app
 
 async def on_startup():
