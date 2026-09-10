@@ -41,6 +41,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin_secret_2024")
 TIMEZONE = os.getenv("TIMEZONE", "Asia/Almaty")
 HOLIDAY_COUNTRY = os.getenv("HOLIDAY_COUNTRY", "RU")
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+RESET_DB = os.getenv("RESET_DB", "False")
 RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL", "")
 PORT = int(os.getenv("PORT", "8080"))
 
@@ -179,8 +180,11 @@ async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 async def init_db():
     async with engine.begin() as conn:
+        if RESET_DB:
+            logger.warning("⚠️ RESET_DB is True. Dropping all tables and recreating schema...")
+            await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database initialized successfully.")
+    logger.info("Database schema synchronized and initialized successfully.")
 
 # Helper functions
 def get_now():
@@ -800,6 +804,13 @@ async def admin_change_prompt(message: Message):
     async with async_session() as session:
         employees = (await session.execute(select(User).order_by(User.created_at))).scalars().all()
     await message.answer("✏️ Выберите сотрудника:", reply_markup=get_admin_employee_keyboard(employees))
+
+@main_router.message(F.text == "🔙 Назад", StateFilter(AdminStates.waiting_salary, AdminStates.waiting_norm_hours))
+async def cancel_admin_action(message: Message, state: FSMContext):
+    await state.clear()
+    user = await get_user_by_telegram_id(message.from_user.id)
+    kb = get_main_keyboard(user.is_admin) if user else get_main_keyboard(False)
+    await message.answer("🏠 Возврат в главное меню", reply_markup=kb)
 
 # Scheduled tasks
 async def recalculate_all_payrolls():
