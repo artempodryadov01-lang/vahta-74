@@ -119,7 +119,7 @@ class User(Base):
     auto_norm_hours: Mapped[bool] = mapped_column(Boolean, default=True)
     weekly_hours: Mapped[float] = mapped_column(Float, default=40.0)
     workdays_per_week: Mapped[int] = mapped_column(Integer, default=5)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(tz))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz))
     shifts: Mapped[List["WorkShift"]] = relationship("WorkShift", back_populates="user")
     breaks: Mapped[List["WorkBreak"]] = relationship("WorkBreak", back_populates="user")
     payrolls: Mapped[List["Payroll"]] = relationship("Payroll", back_populates="user")
@@ -133,7 +133,7 @@ class WorkShift(Base):
     gross_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     break_hours: Mapped[Optional[float]] = mapped_column(Float, default=0.0)
     hours_worked: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(tz))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz))
     user: Mapped["User"] = relationship("User", back_populates="shifts")
     breaks: Mapped[List["WorkBreak"]] = relationship("WorkBreak", back_populates="shift")
 
@@ -147,7 +147,7 @@ class WorkBreak(Base):
     end_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     duration_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(tz))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz))
     user: Mapped["User"] = relationship("User", back_populates="breaks")
     shift: Mapped["WorkShift"] = relationship("WorkShift", back_populates="breaks")
 
@@ -169,7 +169,7 @@ class Payroll(Base):
     salary_date: Mapped[Optional[Date]] = mapped_column(Date, nullable=True)
     advance_paid: Mapped[bool] = mapped_column(Boolean, default=False)
     salary_paid: Mapped[bool] = mapped_column(Boolean, default=False)
-    calculated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(tz))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz))
     user: Mapped["User"] = relationship("User", back_populates="payrolls")
     __table_args__ = (UniqueConstraint("user_id", "year", "month", name="uq_payroll_user_month"),)
 
